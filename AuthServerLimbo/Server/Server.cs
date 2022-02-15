@@ -76,10 +76,10 @@ namespace AuthServerLimbo.Server
                 }
                 Console.WriteLine(); */
                 Packet.Packet outgoing = ResponsePacket(p);
-                if (!outgoing.IsEmpty())
+                if (!outgoing.IsEmpty()) // checking, if packet has data in it
                 {
-                    current.Send(outgoing.PacketBuilder());
-                    if (p.Id == (byte)PacketID.PING)
+                    current.Send(outgoing.PacketBuilder()); // sending packet
+                    if (p.Id == (byte)PacketID.PING) //closing connection if packet was ping
                     {
                         current.Close();
                         closed = true;

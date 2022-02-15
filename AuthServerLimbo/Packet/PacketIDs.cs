@@ -4,7 +4,7 @@
     {
         public enum PacketID : byte
         {
-            HANDSHAKE,
+            HANDSHAKE, // can be request/response
             PING
         }
     }
