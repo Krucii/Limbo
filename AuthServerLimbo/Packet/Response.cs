@@ -1,6 +1,7 @@
 ﻿using static AuthServerLimbo.Packet.PacketIDs;
 using static AuthServerLimbo.Utils.ArrayUtils;
 using System;
+using System.Linq;
 
 namespace AuthServerLimbo.Packet
 {
@@ -10,18 +11,22 @@ namespace AuthServerLimbo.Packet
         {
             switch ((PacketID)IncomingPacket.Id)
             {
-                case PacketID.HANDSHAKE:
+                case PacketID.HANDSHAKE when IncomingPacket.Data.Any(): //differs handshake and request
                     Console.WriteLine("Got handshake packet.");
-                    return new Packet((byte)PacketID.HANDSHAKE, HandshakeResponse());
+                    return new Packet(); // empty packet, without sending
+                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() == false:
+                    Console.WriteLine("Got request packet.");
+                    return new Packet((byte)PacketID.HANDSHAKE, PingRequestResponse());
                 case PacketID.PING:
                     Console.WriteLine("Got ping packet.");
                     return new Packet((byte)PacketID.PING, IncomingPacket.Data.ToArray());
                 default:
-                    return new Packet(0x0, new byte[] { 0 }); // empty packet, invalid
+                    Console.WriteLine("Got invalid packet.");
+                    return new Packet(); // empty packet, invalid
             }
         }
 
-        private static byte[] HandshakeResponse()
+        private static byte[] PingRequestResponse()
         {
             string JSON = "{\"version\":{\"name\":\"1.8.8\",\"protocol\":47},\"players\":{\"max\":1,\"online\":0},\"description\":{\"text\":\"Hello world\"}}";
             return CreateArrayFromString(JSON, JSON.Length + 1, 1);

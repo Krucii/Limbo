@@ -75,11 +75,15 @@ namespace AuthServerLimbo.Server
                     Console.Write("{0:X} ", b);
                 }
                 Console.WriteLine(); */
-                current.Send(ResponsePacket(p).PacketBuilder());
-                if (p.Id == (byte)PacketID.PING)
+                Packet.Packet outgoing = ResponsePacket(p);
+                if (!outgoing.IsEmpty())
                 {
-                    current.Close();
-                    closed = true;
+                    current.Send(outgoing.PacketBuilder());
+                    if (p.Id == (byte)PacketID.PING)
+                    {
+                        current.Close();
+                        closed = true;
+                    }
                 }
             }
 

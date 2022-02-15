@@ -22,11 +22,11 @@ namespace AuthServerLimbo.Packet
             byte[] b = new byte[Length + 1];
             b[0] = Length;
             b[1] = Id;
-            int j = 2;
+            int index = 2;
             foreach (var i in Data.ToArray())
             {
-                b[j] = i;
-                j++;
+                b[index] = i;
+                index++;
             }
             return b;
         }
@@ -43,6 +43,16 @@ namespace AuthServerLimbo.Packet
             Length = p[0];
             Id = p[1];
             Data.AddRange(p.Skip(2).Take(Length));
+        }
+
+        public Packet()
+        {
+            Length = 0;
+        }
+
+        public bool IsEmpty()
+        {
+            return Length == 0 ? true : false;
         }
     }
 }
