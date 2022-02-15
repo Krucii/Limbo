@@ -8,7 +8,7 @@ namespace AuthServerLimbo.Packet
 {
     public class Packet
     {
-        public byte Length { get; set; }
+        private byte Length { get; set; }
         public byte Id { get; set; }
         public List<byte> Data = new();
 

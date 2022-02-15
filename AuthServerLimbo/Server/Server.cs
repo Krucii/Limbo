@@ -9,7 +9,7 @@ namespace AuthServerLimbo.Server
     class Server
     {
         private static readonly Socket _ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        private static readonly int _BufferSize = 1024;
+        private const int _BufferSize = 1024;
         private static readonly byte[] _Buffer = new byte[_BufferSize];
 
         public static void SetupServer()
@@ -26,13 +26,13 @@ namespace AuthServerLimbo.Server
             _ServerSocket.Close();
         }
 
-        private static void AcceptCallback(IAsyncResult AR)
+        private static void AcceptCallback(IAsyncResult ar)
         {
             Socket socket;
 
             try
             {
-                socket = _ServerSocket.EndAccept(AR);
+                socket = _ServerSocket.EndAccept(ar);
             }
             catch (ObjectDisposedException) // I cannot seem to avoid this (on exit when properly closing sockets)
             {
@@ -43,15 +43,15 @@ namespace AuthServerLimbo.Server
             _ServerSocket.BeginAccept(AcceptCallback, null);
         }
 
-        private static void ReceiveCallback(IAsyncResult AR)
+        private static void ReceiveCallback(IAsyncResult ar)
         {
-            Socket current = (Socket)AR.AsyncState;
+            Socket current = (Socket)ar.AsyncState;
             int received;
             bool closed = false;
 
             try
             {
-                received = current.EndReceive(AR);
+                received = current.EndReceive(ar);
             }
             catch (SocketException)
             {
