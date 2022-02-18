@@ -6,38 +6,34 @@ using AuthServerLimbo.Packet.Server;
 
 namespace AuthServerLimbo.Packet
 {
-    class Response
+    internal class Response
     {
-        public static Packet ResponsePacket(Packet IncomingPacket)
+        public static PacketOld ResponsePacket(PacketOld incomingPacketOld)
         {
-            Console.WriteLine(IncomingPacket.ToString());
-            switch ((PacketID)IncomingPacket.Id)
+            //Console.WriteLine(incomingPacketOld.ToString());
+            switch ((ClientPacketId)incomingPacketOld.Id)
             {
                 // Server list ping
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() && (IncomingPacket.Data.Last() == 1 || IncomingPacket.Data.Last() == 2): //differs handshake and request
-                    Console.WriteLine("Got handshake packet.");
-                    return new Packet(); // empty packet, without sending
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() == false:
-                    Console.WriteLine("Got request packet.");
-                    return new Packet((byte)PacketID.HANDSHAKE, PingRequestResponse());
-                case PacketID.PING:
-                    Console.WriteLine("Got ping packet.");
-                    return new Packet((byte)PacketID.PING, IncomingPacket.Data.ToArray());
+                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() && (incomingPacketOld.Data.Last() == 1 || incomingPacketOld.Data.Last() == 2): //differs handshake and request
+                    return new PacketOld(); // empty packet, without sending
+                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() == false:
+                    return new PacketOld((byte)ClientPacketId.Handshake, PingRequestResponse());
+                case ClientPacketId.Ping:
+                    return new PacketOld((byte)ClientPacketId.Ping, incomingPacketOld.Data.ToArray());
                 // Login sequence
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() && (IncomingPacket.Data.Last() != 1 || IncomingPacket.Data.Last() != 2):
+                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() && (incomingPacketOld.Data.Last() != 1 || incomingPacketOld.Data.Last() != 2):
+                    Console.WriteLine("New login");
                     var g = Guid.NewGuid().ToString();
-                    byte[] Response = Combine(CreateArrayFromString(g, g.Length + 1, 1), IncomingPacket.Data.ToArray());
-                    Packet p = new Packet((byte)PacketID.LOGIN, Response);
+                    byte[] Response = Combine(CreateArrayFromString(g, g.Length + 1, 1), incomingPacketOld.Data.ToArray());
+                    var p = new PacketOld((byte)ServerPacketId.Login, Response);
                     GVar.TEST = true;
                     return p;
-                case PacketID.PLUGINMESSAGE:
-                    Console.WriteLine("CHUJJJJ");
+                case ClientPacketId.PluginMessage:
                     PlayerPositionAndLook ppal = new PlayerPositionAndLook();
-                    return new Packet(ppal.ToByteArray());
+                    return new PacketOld(ppal.ToByteArray());
                     
                 default:
-                    Console.WriteLine("Got invalid packet.");
-                    return new Packet(); // empty packet, invalid
+                    return new PacketOld(); // empty packet, invalid
             }
         }
 

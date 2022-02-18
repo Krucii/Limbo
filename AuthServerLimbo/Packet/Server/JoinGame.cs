@@ -1,41 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace AuthServerLimbo.Packet.Server
 {
-    public class JoinGame : IPacket
+    public class JoinGame : Packet, IPacket
     {
-        public int Id => 0x01;
+        public override byte Id => (int)PacketIDs.ServerPacketId.JoinGame;
         
-        private Random r = new Random();
-        
-        public List<byte> Data = new();
-        
-        public PacketString a = new PacketString("default");
+        private readonly Random _random = new();
+        private readonly PacketString _packetString = new("default");
 
         public JoinGame()
         {
-            Data.AddRange(BitConverter.GetBytes(r.Next(1, 100)));
+            Data.AddRange(BitConverter.GetBytes(_random.Next(1, 100)));
             Data.Add(0);
             Data.Add(1);
             Data.Add(0);
             Data.Add(1);
-            Data.AddRange(a.ToByteArray());
-            Data.Add(0);
-        }
-
-        public byte[] ToByteArray()
-        {
-            byte[] array = new byte[Data.Count + 2];
-            array[0] = Convert.ToByte(Data.Count + 1);
-            array[1] = Convert.ToByte(Id);
-            int index = 2;
-            foreach (var i in Data.ToArray())
-            {
-                array[index] = i;
-                index++;
-            }
-            return array;
+            Data.AddRange(_packetString.ToByteArray());
+            Data.Add(1);
         }
     }
 }
