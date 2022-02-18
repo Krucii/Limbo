@@ -4,8 +4,10 @@
     {
         public enum PacketID : byte
         {
-            HANDSHAKE, // can be request/response
-            PING
+            HANDSHAKE, // can be request/response/login
+            PING,
+            LOGIN,
+            PLUGINMESSAGE = 0x17
         }
     }
 }

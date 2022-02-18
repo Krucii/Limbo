@@ -2,6 +2,7 @@
 using static AuthServerLimbo.Utils.ArrayUtils;
 using System;
 using System.Linq;
+using AuthServerLimbo.Packet.Server;
 
 namespace AuthServerLimbo.Packet
 {
@@ -9,9 +10,11 @@ namespace AuthServerLimbo.Packet
     {
         public static Packet ResponsePacket(Packet IncomingPacket)
         {
+            Console.WriteLine(IncomingPacket.ToString());
             switch ((PacketID)IncomingPacket.Id)
             {
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any(): //differs handshake and request
+                // Server list ping
+                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() && (IncomingPacket.Data.Last() == 1 || IncomingPacket.Data.Last() == 2): //differs handshake and request
                     Console.WriteLine("Got handshake packet.");
                     return new Packet(); // empty packet, without sending
                 case PacketID.HANDSHAKE when IncomingPacket.Data.Any() == false:
@@ -20,6 +23,18 @@ namespace AuthServerLimbo.Packet
                 case PacketID.PING:
                     Console.WriteLine("Got ping packet.");
                     return new Packet((byte)PacketID.PING, IncomingPacket.Data.ToArray());
+                // Login sequence
+                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() && (IncomingPacket.Data.Last() != 1 || IncomingPacket.Data.Last() != 2):
+                    var g = Guid.NewGuid().ToString();
+                    byte[] Response = Combine(CreateArrayFromString(g, g.Length + 1, 1), IncomingPacket.Data.ToArray());
+                    Packet p = new Packet((byte)PacketID.LOGIN, Response);
+                    GVar.TEST = true;
+                    return p;
+                case PacketID.PLUGINMESSAGE:
+                    Console.WriteLine("CHUJJJJ");
+                    PlayerPositionAndLook ppal = new PlayerPositionAndLook();
+                    return new Packet(ppal.ToByteArray());
+                    
                 default:
                     Console.WriteLine("Got invalid packet.");
                     return new Packet(); // empty packet, invalid

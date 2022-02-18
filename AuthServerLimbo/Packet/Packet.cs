@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AuthServerLimbo.Packet
 {
@@ -53,6 +51,11 @@ namespace AuthServerLimbo.Packet
         public bool IsEmpty()
         {
             return Length == 0 ? true : false;
+        }
+
+        public override string ToString()
+        {
+            return $@"[Len: {Length}] [ID: {Id}] [Data: {String.Join(" ", Data)}]";
         }
     }
 }

@@ -3,6 +3,8 @@ using static AuthServerLimbo.Packet.Response;
 using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
+using AuthServerLimbo.Packet;
+using AuthServerLimbo.Packet.Server;
 
 namespace AuthServerLimbo.Server
 {
@@ -66,26 +68,40 @@ namespace AuthServerLimbo.Server
             if (receivedBuffer.Length > 0)
             {
                 var p = new Packet.Packet(receivedBuffer);
-                /* Console.WriteLine("RECEIVED");
-                Console.WriteLine("Length: " + p.length);
-                Console.WriteLine("ID: {0:X}", p.id);
-                Console.Write("Data: ");
-                foreach (var b in p.data)
-                {
-                    Console.Write("{0:X} ", b);
-                }
-                Console.WriteLine(); */
+                
                 Packet.Packet outgoing = ResponsePacket(p);
                 if (!outgoing.IsEmpty()) // checking, if packet has data in it
                 {
                     current.Send(outgoing.PacketBuilder()); // sending packet
                     if (p.Id == (byte)PacketID.PING) //closing connection if packet was ping
                     {
+                        current.Shutdown(SocketShutdown.Both);
                         current.Close();
                         closed = true;
                     }
+                    if (p.Id == 23)
+                    {
+                        Console.WriteLine("kurwa");
+                        PlayerPositionAndLook ppal = new PlayerPositionAndLook();
+                        current.Send(ppal.ToByteArray());
+                    }
                 }
             }
+            if (GVar.TEST == true)
+            {
+                JoinGame jg = new JoinGame();
+                current.Send(jg.ToByteArray());
+                PluginMessage pm = new PluginMessage();
+                current.Send(pm.ToByteArray());
+                ServerDifficulty sd = new ServerDifficulty();
+                current.Send(sd.ToByteArray());
+                SpawnPosition sp = new SpawnPosition();
+                current.Send(sp.ToByteArray());
+                PlayerAbilities pa = new PlayerAbilities();
+                current.Send(pa.ToByteArray());
+                GVar.TEST = false;
+            }
+            
 
             if (closed == false)
                 current.BeginReceive(_Buffer, 0, _BufferSize, SocketFlags.None, ReceiveCallback, current);
