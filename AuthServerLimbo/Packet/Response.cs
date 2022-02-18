@@ -1,46 +1,38 @@
 ﻿using static AuthServerLimbo.Packet.PacketIDs;
-using static AuthServerLimbo.Utils.ArrayUtils;
 using System;
 using System.Linq;
-using AuthServerLimbo.Packet.Server;
+using AuthServerLimbo.Packet.Server.LoginSequence;
+using AuthServerLimbo.Packet.Server.ServerListPing;
 
 namespace AuthServerLimbo.Packet
 {
     internal class Response
     {
-        public static PacketOld ResponsePacket(PacketOld incomingPacketOld)
+        public static byte[] ResponsePacket(byte id, byte[] data)
         {
-            //Console.WriteLine(incomingPacketOld.ToString());
-            switch ((ClientPacketId)incomingPacketOld.Id)
+            switch ((ClientPacketId)id)
             {
                 // Server list ping
-                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() && (incomingPacketOld.Data.Last() == 1 || incomingPacketOld.Data.Last() == 2): //differs handshake and request
-                    return new PacketOld(); // empty packet, without sending
-                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() == false:
-                    return new PacketOld((byte)ClientPacketId.Handshake, PingRequestResponse());
+                case ClientPacketId.Handshake when data.Any() && (data.Last() == 1 || data.Last() == 2): //differs handshake and request
+                    return Array.Empty<byte>(); // empty packet, without sending
+                case ClientPacketId.Request when data.Any() == false:
+                    var response = new Server.ServerListPing.Response();
+                    return response.ToByteArray();
                 case ClientPacketId.Ping:
-                    return new PacketOld((byte)ClientPacketId.Ping, incomingPacketOld.Data.ToArray());
+                    var pongResponse = new Pong(data.ToArray());
+                    return pongResponse.ToByteArray();
                 // Login sequence
-                case ClientPacketId.Handshake when incomingPacketOld.Data.Any() && (incomingPacketOld.Data.Last() != 1 || incomingPacketOld.Data.Last() != 2):
-                    Console.WriteLine("New login");
-                    var g = Guid.NewGuid().ToString();
-                    byte[] Response = Combine(CreateArrayFromString(g, g.Length + 1, 1), incomingPacketOld.Data.ToArray());
-                    var p = new PacketOld((byte)ServerPacketId.Login, Response);
+                case ClientPacketId.Login when data.Any() && (data.Last() != 1 || data.Last() != 2):
+                    var loginSuccess = new LoginSuccess(data.ToArray());
                     GVar.TEST = true;
-                    return p;
+                    return loginSuccess.ToByteArray();
                 case ClientPacketId.PluginMessage:
-                    PlayerPositionAndLook ppal = new PlayerPositionAndLook();
-                    return new PacketOld(ppal.ToByteArray());
-                    
-                default:
-                    return new PacketOld(); // empty packet, invalid
-            }
-        }
+                    var pluginMessageResponse = new PlayerPositionAndLook();
+                    return pluginMessageResponse.ToByteArray();
 
-        private static byte[] PingRequestResponse()
-        {
-            string JSON = "{\"version\":{\"name\":\"1.8.8\",\"protocol\":47},\"players\":{\"max\":1,\"online\":0},\"description\":{\"text\":\"Hello world\"}}";
-            return CreateArrayFromString(JSON, JSON.Length + 1, 1);
+                default:
+                    return Array.Empty<byte>(); // empty packet, invalid
+            }
         }
     }
 }

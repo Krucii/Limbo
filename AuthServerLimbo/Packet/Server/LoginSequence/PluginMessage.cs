@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace AuthServerLimbo.Packet.Server
+namespace AuthServerLimbo.Packet.Server.LoginSequence
 {
     public class PluginMessage : Packet, IPacket
     {

@@ -12,7 +12,7 @@ namespace AuthServerLimbo.Packet
         {
             Data = new List<byte>();
         }
-        
+
         public byte[] ToByteArray()
         {
             var array = new byte[Data.Count + 2];
@@ -26,5 +26,11 @@ namespace AuthServerLimbo.Packet
             }
             return array;
         }
+        
+        public override string ToString()
+        {
+            return $@"[Len: {Data.Count+2}] [ID: {Id}] [Data: {string.Join(" ", Data)}]";
+        }
+        
     }
 }

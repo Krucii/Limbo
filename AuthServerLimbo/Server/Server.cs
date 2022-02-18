@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Linq;
 using static AuthServerLimbo.Packet.Response;
 using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
 using AuthServerLimbo.Packet;
 using AuthServerLimbo.Packet.Server;
+using AuthServerLimbo.Packet.Server.LoginSequence;
 
 namespace AuthServerLimbo.Server
 {
@@ -67,13 +69,13 @@ namespace AuthServerLimbo.Server
             Array.Copy(Buffer, receivedBuffer, received);
             if (receivedBuffer.Length > 0)
             {
-                var p = new PacketOld(receivedBuffer);
-                
-                var outgoing = ResponsePacket(p);
-                if (!outgoing.IsEmpty()) // checking, if packet has data in it
+                var id = receivedBuffer[1];
+                var data = receivedBuffer.Skip(2).Take(receivedBuffer[0]).ToArray();
+                var outgoing = ResponsePacket(id, data);
+                if (outgoing.Length > 0) // checking, if packet has data in it
                 {
-                    current.Send(outgoing.PacketBuilder()); // sending packet
-                    if (p.Id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
+                    current.Send(outgoing); // sending packet
+                    if (id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
                     {
                         current.Shutdown(SocketShutdown.Both);
                         current.Close();
@@ -81,7 +83,7 @@ namespace AuthServerLimbo.Server
                     }
                 }
             }
-            if (GVar.TEST == true)
+            if (GVar.TEST)
             {
                 var jg = new JoinGame();
                 current.Send(jg.ToByteArray());
@@ -97,7 +99,7 @@ namespace AuthServerLimbo.Server
             }
             
 
-            if (closed == false)
+            if (!closed)
                 current.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, current);
         }
     }

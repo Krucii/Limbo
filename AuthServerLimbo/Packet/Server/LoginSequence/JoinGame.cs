@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace AuthServerLimbo.Packet.Server
+namespace AuthServerLimbo.Packet.Server.LoginSequence
 {
     public class JoinGame : Packet, IPacket
     {
-        public override byte Id => (int)PacketIDs.ServerPacketId.JoinGame;
+        public override byte Id => (byte)PacketIDs.ServerPacketId.JoinGame;
         
         private readonly Random _random = new();
         private readonly PacketString _packetString = new("default");

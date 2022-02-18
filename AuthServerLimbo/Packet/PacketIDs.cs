@@ -4,15 +4,17 @@
     {
         public enum ClientPacketId : byte
         {
-            Handshake = 0x00, // can be request/response/login
+            Handshake, Request = 0x00,
+            Login = 0x00,
             Ping = 0x01,
             PluginMessage = 0x17
         }
 
         public enum ServerPacketId : byte
         {
-            JoinGame = 0x01,
-            Login = 0x02,
+            Response = 0x00,
+            JoinGame, Pong = 0x01,
+            LoginSuccess = 0x02,
             SpawnPosition = 0x05,
             PlayerPositionAndLook = 0x08, 
             PlayerAbilities = 0x39,

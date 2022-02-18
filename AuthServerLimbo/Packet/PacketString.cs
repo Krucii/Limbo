@@ -15,12 +15,6 @@ namespace AuthServerLimbo.Packet
             Data = text;
         }
 
-        public PacketString(byte[] text)
-        {
-            Length = text[0];
-            Data = Encoding.UTF8.GetString(text, 1, Length);
-        }
-
         public byte[] ToByteArray()
         {
             byte[] array = new byte[Length + 1];
