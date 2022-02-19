@@ -27,9 +27,9 @@ namespace AuthServerLimbo.Packet
                 
                 
                 // Login sequence
-                case ClientPacketId.Login when client.GetState() == ClientState.Login:
-                    var loginSuccess = new LoginSuccess(data.ToArray());
-                    GVar.TEST = true;
+                case ClientPacketId.Login when client.GetState() == ClientState.LoginInit:
+                    var loginSuccess = new LoginSuccess(data.ToArray(), client);
+                    client.SetState(ClientState.Login);
                     return loginSuccess.ToByteArray();
                 case ClientPacketId.PluginMessage:
                     var pluginMessageResponse = new PlayerPositionAndLook();

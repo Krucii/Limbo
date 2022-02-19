@@ -5,6 +5,7 @@ using static AuthServerLimbo.Packet.Response;
 using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
+using AuthServerLimbo.Client;
 using AuthServerLimbo.Packet.Server.LoginSequence;
 
 namespace AuthServerLimbo.Server
@@ -33,8 +34,6 @@ namespace AuthServerLimbo.Server
         private static void AcceptCallback(IAsyncResult ar)
         {
             Socket socket;
-            
-            Console.WriteLine(Clients.Count);
 
             try
             {
@@ -45,8 +44,8 @@ namespace AuthServerLimbo.Server
                 return;
             }
             
-            // handle client close
             Clients.Add(new Client.Client(socket));
+            Console.WriteLine(Clients.Count);
 
             socket.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, socket);
             ServerSocket.BeginAccept(AcceptCallback, null);
@@ -57,10 +56,18 @@ namespace AuthServerLimbo.Server
             var current = (Socket)ar.AsyncState;
             int received;
             var closed = false;
+            
+            var client = Clients.Find(e => e.GetClientSocket() == current);
 
             try
             {
                 received = current!.EndReceive(ar);
+                if (received == 0)
+                {
+                    closed = true;
+                    current.Close();
+                    Clients.Remove(client);
+                }
             }
             catch (SocketException)
             {
@@ -69,8 +76,6 @@ namespace AuthServerLimbo.Server
                 current?.Close();
                 return;
             }
-
-            var client = Clients.Find(e => e.GetClientSocket() == current);
 
             var receivedBuffer = new byte[received];
             Array.Copy(Buffer, receivedBuffer, received);
@@ -84,26 +89,23 @@ namespace AuthServerLimbo.Server
                     current.Send(outgoing); // sending packet
                     if (id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
                     {
-                        Clients.Remove(client);
-                        current.Shutdown(SocketShutdown.Both);
-                        current.Close();
                         closed = true;
+                        current.Close();
+                        Clients.Remove(client);
                     }
                 }
             }
-            if (GVar.TEST)
+            
+            //login sequence
+            if (client != null && client.GetState() == ClientState.Login)
             {
-                var jg = new JoinGame();
-                current.Send(jg.ToByteArray());
-                var pm = new PluginMessage();
-                current.Send(pm.ToByteArray());
-                var sd = new ServerDifficulty();
-                current.Send(sd.ToByteArray());
-                var sp = new SpawnPosition();
-                current.Send(sp.ToByteArray());
-                var pa = new PlayerAbilities();
-                current.Send(pa.ToByteArray());
-                GVar.TEST = false;
+                current.Send(new JoinGame().ToByteArray());
+                current.Send(new PluginMessage().ToByteArray());
+                current.Send(new ServerDifficulty().ToByteArray());
+                current.Send(new SpawnPosition().ToByteArray());
+                current.Send(new PlayerAbilities().ToByteArray());
+                client.SetState(ClientState.Play);
+                Console.WriteLine($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
             }
             
 
