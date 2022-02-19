@@ -1,35 +1,43 @@
 ﻿using static AuthServerLimbo.Packet.PacketIDs;
-using static AuthServerLimbo.Utils.ArrayUtils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using AuthServerLimbo.Client;
+using AuthServerLimbo.Packet.Server.LoginSequence;
+using AuthServerLimbo.Packet.Server.ServerListPing;
 
 namespace AuthServerLimbo.Packet
 {
-    class Response
+    internal class Response
     {
-        public static Packet ResponsePacket(Packet IncomingPacket)
+        public static byte[] ResponsePacket(Client.Client client, byte id, IEnumerable<byte> data)
         {
-            switch ((PacketID)IncomingPacket.Id)
+            switch ((ClientPacketId)id)
             {
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any(): //differs handshake and request
-                    Console.WriteLine("Got handshake packet.");
-                    return new Packet(); // empty packet, without sending
-                case PacketID.HANDSHAKE when IncomingPacket.Data.Any() == false:
-                    Console.WriteLine("Got request packet.");
-                    return new Packet((byte)PacketID.HANDSHAKE, PingRequestResponse());
-                case PacketID.PING:
-                    Console.WriteLine("Got ping packet.");
-                    return new Packet((byte)PacketID.PING, IncomingPacket.Data.ToArray());
-                default:
-                    Console.WriteLine("Got invalid packet.");
-                    return new Packet(); // empty packet, invalid
-            }
-        }
+                // Server list ping
+                case ClientPacketId.Handshake when client.GetState() == ClientState.None: //differs handshake and request
+                    client.SetState((ClientState)data.Last());
+                    return Array.Empty<byte>(); // empty packet, without sending
+                case ClientPacketId.Request when client.GetState() == ClientState.Status:
+                    var response = new Server.ServerListPing.Response();
+                    return response.ToByteArray();
+                case ClientPacketId.Ping:
+                    var pongResponse = new Pong(data.ToArray());
+                    return pongResponse.ToByteArray();
+                
+                
+                // Login sequence
+                case ClientPacketId.Login when client.GetState() == ClientState.LoginInit:
+                    var loginSuccess = new LoginSuccess(data.ToArray(), client);
+                    client.SetState(ClientState.Login);
+                    return loginSuccess.ToByteArray();
+                case ClientPacketId.PluginMessage:
+                    var pluginMessageResponse = new PlayerPositionAndLook();
+                    return pluginMessageResponse.ToByteArray();
 
-        private static byte[] PingRequestResponse()
-        {
-            string JSON = "{\"version\":{\"name\":\"1.8.8\",\"protocol\":47},\"players\":{\"max\":1,\"online\":0},\"description\":{\"text\":\"Hello world\"}}";
-            return CreateArrayFromString(JSON, JSON.Length + 1, 1);
+                default:
+                    return Array.Empty<byte>(); // empty packet, invalid
+            }
         }
     }
 }

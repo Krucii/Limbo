@@ -1,29 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using static AuthServerLimbo.Packet.Response;
 using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
+using AuthServerLimbo.Client;
+using AuthServerLimbo.Packet.Server.LoginSequence;
 
 namespace AuthServerLimbo.Server
 {
-    class Server
+    internal class Server
     {
-        private static readonly Socket _ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        private const int _BufferSize = 1024;
-        private static readonly byte[] _Buffer = new byte[_BufferSize];
+        private static readonly Socket ServerSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private const int BufferSize = 1024;
+        private static readonly byte[] Buffer = new byte[BufferSize];
+        private static readonly List<Client.Client> Clients = new();
 
         public static void SetupServer()
         {
             Console.WriteLine("Setting up server...");
-            _ServerSocket.Bind(new IPEndPoint(IPAddress.Any, 25565));
-            _ServerSocket.Listen(0);
-            _ServerSocket.BeginAccept(AcceptCallback, null);
+            ServerSocket.Bind(new IPEndPoint(IPAddress.Any, 25565));
+            ServerSocket.Listen(0);
+            ServerSocket.BeginAccept(AcceptCallback, null);
             Console.WriteLine("Server setup complete");
         }
 
         public static void CloseAllSockets()
         {
-            _ServerSocket.Close();
+            ServerSocket.Close();
         }
 
         private static void AcceptCallback(IAsyncResult ar)
@@ -32,63 +37,80 @@ namespace AuthServerLimbo.Server
 
             try
             {
-                socket = _ServerSocket.EndAccept(ar);
+                socket = ServerSocket.EndAccept(ar);
             }
             catch (ObjectDisposedException) // I cannot seem to avoid this (on exit when properly closing sockets)
             {
                 return;
             }
+            
+            Clients.Add(new Client.Client(socket));
+            Console.WriteLine(Clients.Count);
 
-            socket.BeginReceive(_Buffer, 0, _BufferSize, SocketFlags.None, ReceiveCallback, socket);
-            _ServerSocket.BeginAccept(AcceptCallback, null);
+            socket.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, socket);
+            ServerSocket.BeginAccept(AcceptCallback, null);
         }
 
         private static void ReceiveCallback(IAsyncResult ar)
         {
-            Socket current = (Socket)ar.AsyncState;
+            var current = (Socket)ar.AsyncState;
             int received;
-            bool closed = false;
+            var closed = false;
+            
+            var client = Clients.Find(e => e.GetClientSocket() == current);
 
             try
             {
-                received = current.EndReceive(ar);
+                received = current!.EndReceive(ar);
+                if (received == 0)
+                {
+                    closed = true;
+                    current.Close();
+                    Clients.Remove(client);
+                }
             }
             catch (SocketException)
             {
                 Console.WriteLine("Client forcefully disconnected");
                 // Don't shutdown because the socket may be disposed and its disconnected anyway.
-                current.Close();
+                current?.Close();
                 return;
             }
 
-            byte[] receivedBuffer = new byte[received];
-            Array.Copy(_Buffer, receivedBuffer, received);
+            var receivedBuffer = new byte[received];
+            Array.Copy(Buffer, receivedBuffer, received);
             if (receivedBuffer.Length > 0)
             {
-                var p = new Packet.Packet(receivedBuffer);
-                /* Console.WriteLine("RECEIVED");
-                Console.WriteLine("Length: " + p.length);
-                Console.WriteLine("ID: {0:X}", p.id);
-                Console.Write("Data: ");
-                foreach (var b in p.data)
+                var id = receivedBuffer[1];
+                var data = receivedBuffer.Skip(2).Take(receivedBuffer[0]).ToArray();
+                var outgoing = ResponsePacket(client, id, data);
+                if (outgoing.Length > 0) // checking, if packet has data in it
                 {
-                    Console.Write("{0:X} ", b);
-                }
-                Console.WriteLine(); */
-                Packet.Packet outgoing = ResponsePacket(p);
-                if (!outgoing.IsEmpty()) // checking, if packet has data in it
-                {
-                    current.Send(outgoing.PacketBuilder()); // sending packet
-                    if (p.Id == (byte)PacketID.PING) //closing connection if packet was ping
+                    current.Send(outgoing); // sending packet
+                    if (id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
                     {
-                        current.Close();
                         closed = true;
+                        current.Close();
+                        Clients.Remove(client);
                     }
                 }
             }
+            
+            //login sequence
+            if (client != null && client.GetState() == ClientState.Login)
+            {
+                current.Send(new JoinGame().ToByteArray());
+                current.Send(new PluginMessage().ToByteArray());
+                current.Send(new ServerDifficulty().ToByteArray());
+                current.Send(new SpawnPosition().ToByteArray());
+                current.Send(new PlayerAbilities().ToByteArray());
+                client.SetState(ClientState.Play);
+                Console.WriteLine($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
+            }
+            
 
-            if (closed == false)
-                current.BeginReceive(_Buffer, 0, _BufferSize, SocketFlags.None, ReceiveCallback, current);
+            if (!closed)
+                current.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, current);
         }
     }
 }

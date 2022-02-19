@@ -1,58 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AuthServerLimbo.Packet
 {
-    public class Packet
+    public abstract class Packet
     {
-        private byte Length { get; set; }
-        public byte Id { get; set; }
-        public List<byte> Data = new();
+        protected readonly List<byte> Data;
+        public abstract byte Id { get; }
 
-        private void SetLength()
+        protected Packet()
         {
-            Length = Convert.ToByte(Data.Count + 1);
+            Data = new List<byte>();
         }
 
-        public byte[] PacketBuilder()
+        public byte[] ToByteArray()
         {
-            byte[] b = new byte[Length + 1];
-            b[0] = Length;
-            b[1] = Id;
-            int index = 2;
+            var array = new byte[Data.Count + 2];
+            array[0] = Convert.ToByte(Data.Count + 1);
+            array[1] = Convert.ToByte(Id);
+            var index = 2;
             foreach (var i in Data.ToArray())
             {
-                b[index] = i;
+                array[index] = i;
                 index++;
             }
-            return b;
+            return array;
         }
-
-        public Packet(byte PacketID, byte[] content)
+        
+        public override string ToString()
         {
-            Id = PacketID;
-            Data = content.ToList();
-            SetLength();
+            return $@"[Len: {Data.Count+2}] [ID: {Id}] [Data: {string.Join(" ", Data)}]";
         }
-
-        public Packet(byte[] p)
-        {
-            Length = p[0];
-            Id = p[1];
-            Data.AddRange(p.Skip(2).Take(Length));
-        }
-
-        public Packet()
-        {
-            Length = 0;
-        }
-
-        public bool IsEmpty()
-        {
-            return Length == 0 ? true : false;
-        }
+        
     }
 }
