@@ -1,20 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using static AuthServerLimbo.Packet.Response;
 using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
-using AuthServerLimbo.Packet;
-using AuthServerLimbo.Packet.Server;
 using AuthServerLimbo.Packet.Server.LoginSequence;
 
 namespace AuthServerLimbo.Server
 {
     internal class Server
     {
-        private static readonly Socket ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private static readonly Socket ServerSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         private const int BufferSize = 1024;
         private static readonly byte[] Buffer = new byte[BufferSize];
+        private static readonly List<Client.Client> Clients = new();
 
         public static void SetupServer()
         {
@@ -33,6 +33,8 @@ namespace AuthServerLimbo.Server
         private static void AcceptCallback(IAsyncResult ar)
         {
             Socket socket;
+            
+            Console.WriteLine(Clients.Count);
 
             try
             {
@@ -42,6 +44,9 @@ namespace AuthServerLimbo.Server
             {
                 return;
             }
+            
+            // handle client close
+            Clients.Add(new Client.Client(socket));
 
             socket.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, socket);
             ServerSocket.BeginAccept(AcceptCallback, null);
@@ -65,18 +70,21 @@ namespace AuthServerLimbo.Server
                 return;
             }
 
+            var client = Clients.Find(e => e.GetClientSocket() == current);
+
             var receivedBuffer = new byte[received];
             Array.Copy(Buffer, receivedBuffer, received);
             if (receivedBuffer.Length > 0)
             {
                 var id = receivedBuffer[1];
                 var data = receivedBuffer.Skip(2).Take(receivedBuffer[0]).ToArray();
-                var outgoing = ResponsePacket(id, data);
+                var outgoing = ResponsePacket(client, id, data);
                 if (outgoing.Length > 0) // checking, if packet has data in it
                 {
                     current.Send(outgoing); // sending packet
                     if (id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
                     {
+                        Clients.Remove(client);
                         current.Shutdown(SocketShutdown.Both);
                         current.Close();
                         closed = true;

@@ -1,6 +1,8 @@
 ﻿using static AuthServerLimbo.Packet.PacketIDs;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using AuthServerLimbo.Client;
 using AuthServerLimbo.Packet.Server.LoginSequence;
 using AuthServerLimbo.Packet.Server.ServerListPing;
 
@@ -8,21 +10,24 @@ namespace AuthServerLimbo.Packet
 {
     internal class Response
     {
-        public static byte[] ResponsePacket(byte id, byte[] data)
+        public static byte[] ResponsePacket(Client.Client client, byte id, IEnumerable<byte> data)
         {
             switch ((ClientPacketId)id)
             {
                 // Server list ping
-                case ClientPacketId.Handshake when data.Any() && (data.Last() == 1 || data.Last() == 2): //differs handshake and request
+                case ClientPacketId.Handshake when client.GetState() == ClientState.None: //differs handshake and request
+                    client.SetState((ClientState)data.Last());
                     return Array.Empty<byte>(); // empty packet, without sending
-                case ClientPacketId.Request when data.Any() == false:
+                case ClientPacketId.Request when client.GetState() == ClientState.Status:
                     var response = new Server.ServerListPing.Response();
                     return response.ToByteArray();
                 case ClientPacketId.Ping:
                     var pongResponse = new Pong(data.ToArray());
                     return pongResponse.ToByteArray();
+                
+                
                 // Login sequence
-                case ClientPacketId.Login when data.Any() && (data.Last() != 1 || data.Last() != 2):
+                case ClientPacketId.Login when client.GetState() == ClientState.Login:
                     var loginSuccess = new LoginSuccess(data.ToArray());
                     GVar.TEST = true;
                     return loginSuccess.ToByteArray();
