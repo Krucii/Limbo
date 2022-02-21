@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using AuthServerLimbo.Client;
 using AuthServerLimbo.Packet.Server.LoginSequence;
+using static AuthServerLimbo.Logger.Logger;
 
 namespace AuthServerLimbo.Server
 {
@@ -19,11 +20,11 @@ namespace AuthServerLimbo.Server
 
         public static void SetupServer()
         {
-            Console.WriteLine("Setting up server...");
+            InfoLog("Setting up Minecraft Server, protocol 47 (1.8-1.8.9) on port 25565");
             ServerSocket.Bind(new IPEndPoint(IPAddress.Any, 25565));
             ServerSocket.Listen(0);
             ServerSocket.BeginAccept(AcceptCallback, null);
-            Console.WriteLine("Server setup complete");
+            InfoLog("Server started successfully");
         }
 
         public static void CloseAllSockets()
@@ -45,7 +46,6 @@ namespace AuthServerLimbo.Server
             }
             
             Clients.Add(new Client.Client(socket));
-            Console.WriteLine(Clients.Count);
 
             socket.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, socket);
             ServerSocket.BeginAccept(AcceptCallback, null);
@@ -71,7 +71,7 @@ namespace AuthServerLimbo.Server
             }
             catch (SocketException)
             {
-                Console.WriteLine("Client forcefully disconnected");
+                WarningLog("Client forcefully disconnected");
                 // Don't shutdown because the socket may be disposed and its disconnected anyway.
                 current?.Close();
                 return;
@@ -105,7 +105,7 @@ namespace AuthServerLimbo.Server
                 current.Send(new SpawnPosition().ToByteArray());
                 current.Send(new PlayerAbilities().ToByteArray());
                 client.SetState(ClientState.Play);
-                Console.WriteLine($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
+                InfoLog($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
             }
             
 

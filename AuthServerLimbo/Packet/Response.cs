@@ -25,7 +25,6 @@ namespace AuthServerLimbo.Packet
                     var pongResponse = new Pong(data.ToArray());
                     return pongResponse.ToByteArray();
                 
-                
                 // Login sequence
                 case ClientPacketId.Login when client.GetState() == ClientState.LoginInit:
                     var loginSuccess = new LoginSuccess(data.ToArray(), client);
