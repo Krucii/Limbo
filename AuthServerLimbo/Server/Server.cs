@@ -71,10 +71,8 @@ namespace AuthServerLimbo.Server
                     closed = true;
                     current.Close();
                     if (client != null && !string.IsNullOrEmpty(client.GetUsername()))
-                    {
                         Log($"{client.GetUsername()} disconnected");
-                        Clients.Remove(client);
-                    }
+                    Clients.Remove(client);
                 }
             }
             catch (SocketException)
