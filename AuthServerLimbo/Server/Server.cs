@@ -127,7 +127,7 @@ namespace AuthServerLimbo.Server
         {
             if (Clients.Count == 0)
                 return;
-            foreach (var c in Clients)
+            foreach (var c in Clients.Where(c => !string.IsNullOrEmpty(c.GetUsername())))
                 c.GetClientSocket().Send(new KeepAlive().ToByteArray());
         }
     }
