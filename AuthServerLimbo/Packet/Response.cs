@@ -21,7 +21,7 @@ namespace AuthServerLimbo.Packet
                 case ClientPacketId.Request when client.GetState() == ClientState.Status:
                     var response = new Server.ServerListPing.Response();
                     return response.ToByteArray();
-                case ClientPacketId.Ping:
+                case ClientPacketId.Ping when client.GetState() == ClientState.Status:
                     var pongResponse = new Pong(data.ToArray());
                     return pongResponse.ToByteArray();
                 
@@ -30,7 +30,7 @@ namespace AuthServerLimbo.Packet
                     var loginSuccess = new LoginSuccess(data.ToArray(), client);
                     client.SetState(ClientState.Login);
                     return loginSuccess.ToByteArray();
-                case ClientPacketId.PluginMessage:
+                case ClientPacketId.PluginMessage when client.GetState() == ClientState.Play:
                     var pluginMessageResponse = new PlayerPositionAndLook();
                     return pluginMessageResponse.ToByteArray();
 
