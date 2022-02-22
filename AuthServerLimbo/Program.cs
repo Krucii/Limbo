@@ -11,10 +11,11 @@ namespace AuthServerLimbo
         {
             var assembly = Assembly.GetExecutingAssembly().GetName();
             if (assembly.Version != null)
-                InfoLog($"Starting {assembly.Name}, Build {assembly.Version.Build}.{assembly.Version.Revision}");
+                Log($"Starting {assembly.Name}, Build {assembly.Version.Build}.{assembly.Version.Revision}");
             SetupServer();
             Console.ReadLine(); // When we press enter close everything
-            InfoLog("Shutting down...");
+            Log("Shutting down...");
+            DisposeLogger();
             CloseAllSockets();
         }
     }

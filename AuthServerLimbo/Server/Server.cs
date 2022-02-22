@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using static AuthServerLimbo.Packet.Response;
-using static AuthServerLimbo.Packet.PacketIDs;
 using System.Net;
 using System.Net.Sockets;
+using System.Timers;
 using AuthServerLimbo.Client;
+using AuthServerLimbo.Packet.Server;
 using AuthServerLimbo.Packet.Server.LoginSequence;
 using static AuthServerLimbo.Logger.Logger;
 
@@ -17,14 +18,17 @@ namespace AuthServerLimbo.Server
         private const int BufferSize = 1024;
         private static readonly byte[] Buffer = new byte[BufferSize];
         private static readonly List<Client.Client> Clients = new();
+        
+        private static Timer _aTimer;
 
         public static void SetupServer()
         {
-            InfoLog("Setting up Minecraft Server, protocol 47 (1.8-1.8.9) on port 25565");
+            Log("Setting up Minecraft Server, protocol 47 (1.8-1.8.9) on port 25565");
             ServerSocket.Bind(new IPEndPoint(IPAddress.Any, 25565));
             ServerSocket.Listen(0);
             ServerSocket.BeginAccept(AcceptCallback, null);
-            InfoLog("Server started successfully");
+            SetTimer();
+            Log("Server started successfully");
         }
 
         public static void CloseAllSockets()
@@ -56,7 +60,7 @@ namespace AuthServerLimbo.Server
             var current = (Socket)ar.AsyncState;
             int received;
             var closed = false;
-            
+
             var client = Clients.Find(e => e.GetClientSocket() == current);
 
             try
@@ -66,12 +70,16 @@ namespace AuthServerLimbo.Server
                 {
                     closed = true;
                     current.Close();
-                    Clients.Remove(client);
+                    if (client != null && !string.IsNullOrEmpty(client.GetUsername()))
+                    {
+                        Log($"{client.GetUsername()} disconnected");
+                        Clients.Remove(client);
+                    }
                 }
             }
             catch (SocketException)
             {
-                WarningLog("Client forcefully disconnected");
+                Warn("Client forcefully disconnected");
                 // Don't shutdown because the socket may be disposed and its disconnected anyway.
                 current?.Close();
                 return;
@@ -87,12 +95,6 @@ namespace AuthServerLimbo.Server
                 if (outgoing.Length > 0) // checking, if packet has data in it
                 {
                     current.Send(outgoing); // sending packet
-                    if (id == (byte)ClientPacketId.Ping) //closing connection if packet was ping
-                    {
-                        closed = true;
-                        current.Close();
-                        Clients.Remove(client);
-                    }
                 }
             }
             
@@ -105,12 +107,30 @@ namespace AuthServerLimbo.Server
                 current.Send(new SpawnPosition().ToByteArray());
                 current.Send(new PlayerAbilities().ToByteArray());
                 client.SetState(ClientState.Play);
-                InfoLog($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
+                Log($"New connection from {client.GetClientSocket().AddressFamily}: {client.GetUsername()} [{client.GetUuid()}]");
             }
             
 
             if (!closed)
                 current.BeginReceive(Buffer, 0, BufferSize, SocketFlags.None, ReceiveCallback, current);
+        }
+        
+        private static void SetTimer()
+        {
+            // Create a timer with a two second interval.
+            _aTimer = new Timer(5000);
+            // Hook up the Elapsed event for the timer. 
+            _aTimer.Elapsed += OnTimedEvent;
+            _aTimer.AutoReset = true;
+            _aTimer.Enabled = true;
+        }
+
+        private static void OnTimedEvent(object source, ElapsedEventArgs e)
+        {
+            if (Clients.Count == 0)
+                return;
+            foreach (var c in Clients)
+                c.GetClientSocket().Send(new KeepAlive().ToByteArray());
         }
     }
 }

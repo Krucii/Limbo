@@ -12,7 +12,7 @@
 
         public enum ServerPacketId : byte
         {
-            Response = 0x00,
+            Response, KeepAlive = 0x00,
             JoinGame, Pong = 0x01,
             LoginSuccess = 0x02,
             SpawnPosition = 0x05,
