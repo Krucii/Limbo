@@ -1,2 +1,2 @@
-# AuthServerLimbo
-Minecraft Limbo type Server Engine with authentication built in
+# Limbo
+Minecraft Limbo type Server Engine
