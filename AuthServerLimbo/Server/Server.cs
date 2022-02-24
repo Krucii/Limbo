@@ -100,7 +100,7 @@ namespace AuthServerLimbo.Server
             if (client != null && client.GetState() == ClientState.Login)
             {
                 current.Send(new JoinGame().ToByteArray());
-                current.Send(new PluginMessage().ToByteArray());
+                //current.Send(new PluginMessage().ToByteArray());
                 current.Send(new ServerDifficulty().ToByteArray());
                 current.Send(new SpawnPosition().ToByteArray());
                 current.Send(new PlayerAbilities().ToByteArray());
